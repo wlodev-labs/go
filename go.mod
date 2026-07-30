@@ -4,6 +4,8 @@ go 1.26.1
 
 require (
 	github.com/cockroachdb/errors v1.14.0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
 	github.com/rs/zerolog v1.35.1
 )
 
