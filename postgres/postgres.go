@@ -1,31 +1,47 @@
 package postgres
 
 import (
-	"fmt"
+	"context"
+	"net"
+	"net/url"
+	"time"
 
 	"github.com/cockroachdb/errors"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
-func Open(host, port, user, password, dbname, sslmode string) (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode,
-	))
+func Open(ctx context.Context, host, port, user, password, dbname, sslmode string) (*sqlx.DB, error) {
+	q := url.Values{}
+	q.Set("sslmode", sslmode)
+
+	dsn := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(user, password),
+		Host:     net.JoinHostPort(host, port),
+		Path:     dbname,
+		RawQuery: q.Encode(),
+	}
+
+	db, err := sqlx.ConnectContext(ctx, "pgx", dsn.String())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrap(err, "failed to connect to postgres")
 	}
-	if err := db.Ping(); err != nil {
-		return nil, errors.WithStack(err)
-	}
+
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetConnMaxIdleTime(5 * time.Minute)
+
 	return db, nil
 }
 
 func IsUniqueConstraintError(err error) bool {
-	var pqErr *pq.Error
-	if ok := errors.As(err, &pqErr); ok {
-		return pqErr.Code == "23505"
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		return pgErr.Code == pgerrcode.UniqueViolation
 	}
 	return false
 }
