@@ -33,9 +33,31 @@ func NewQueries(ex SQLExecutor) *Queries {
 	}
 }
 
+func (q *Queries) Insert(query string, args ...any) error {
+	if resp, err := q.Exec(query, args...); err != nil {
+		return errors.WithStack(err)
+	} else if rowsAffected, err := resp.RowsAffected(); err != nil {
+		return errors.WithStack(err)
+	} else if rowsAffected == 0 {
+		return errors.WithStack(ErrNoRowsAffected)
+	}
+	return nil
+}
+
 func (q *Queries) InsertWithDest(dest any, returningColumns string, query string, args ...any) error {
 	if err := q.Get(dest, fmt.Sprintf("%s RETURNING %s", query, returningColumns), args...); err != nil {
 		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (q *Queries) Update(query string, args ...any) error {
+	if resp, err := q.Exec(query, args...); err != nil {
+		return errors.WithStack(err)
+	} else if rowsAffected, err := resp.RowsAffected(); err != nil {
+		return errors.WithStack(err)
+	} else if rowsAffected == 0 {
+		return errors.WithStack(ErrNoRowsAffected)
 	}
 	return nil
 }
