@@ -1,6 +1,6 @@
 module github.com/wlodev-labs/go
 
-go 1.26.1
+go 1.27.4
 
 require (
 	github.com/cockroachdb/errors v1.14.0
