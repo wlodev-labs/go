@@ -1,0 +1,12 @@
+allOf:
+    - $ref: '../BaseError.yml'
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - forbidden
+
+example:
+    code: forbidden
+    message: You do not have permission to access this resource.

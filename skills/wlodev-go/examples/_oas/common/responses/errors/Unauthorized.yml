@@ -1,0 +1,10 @@
+description: Unauthorized
+content:
+    application/json:
+        schema:
+            type: object
+            required:
+                - error
+            properties:
+                error:
+                    $ref: ../../schemas/errors/UnauthorizedError.yml

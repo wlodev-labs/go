@@ -1,0 +1,86 @@
+package main
+
+import (
+	"api/auth"
+	postgresdb "api/database/postgres"
+	"api/internal/public"
+	"api/services/widgets"
+	"api/utils"
+	"context"
+	"fmt"
+	"net/http"
+
+	_ "github.com/joho/godotenv/autoload"
+	"github.com/rs/zerolog"
+	"github.com/wlodev-labs/go/pagination"
+	wlodevzerolog "github.com/wlodev-labs/go/zerolog"
+)
+
+const (
+	PublicServerHost = "0.0.0.0"
+	PublicServerPort = 5050
+)
+
+type Server struct {
+	*public.PublicServer
+}
+
+func main() {
+	// Must be set before the first log call, otherwise .Err(err) has no stack.
+	zerolog.ErrorStackMarshaler = wlodevzerolog.ErrorStackMarshaler
+	logger := wlodevzerolog.New(utils.GetEnvironment() == utils.DeploymentEnvironmentDevelopment)
+
+	ctx := context.Background()
+
+	db, err := postgresdb.New(ctx)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	// Must match common/parameters/pagination-parameters.yml (default/min/max).
+	paginationClient := pagination.New(20, 1, 100)
+	widgetsService := widgets.New(logger, db)
+
+	publicSpec, err := public.GetSpec()
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+	// The spec's servers URL is a placeholder; leaving it breaks route matching
+	// in the auth middleware.
+	publicSpec.Servers = nil
+
+	authClient, err := auth.New(logger, db, publicSpec)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	publicServer := &Server{
+		public.NewPublicServer(
+			logger,
+			db,
+			paginationClient,
+			widgetsService,
+		),
+	}
+
+	publicHandler := public.NewStrictHandlerWithOptions(
+		publicServer,
+		[]public.StrictMiddlewareFunc{},
+		public.StrictHTTPServerOptions{
+			RequestErrorHandlerFunc: utils.GetRequestErrorHandler(logger),
+		},
+	)
+
+	mux := http.NewServeMux()
+	public.HandlerFromMux(publicHandler, mux)
+
+	publicHTTPServer := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", PublicServerHost, PublicServerPort),
+		Handler: authClient.Middleware(mux),
+	}
+
+	logger.Info().Msgf("Starting public API server on %s:%d", PublicServerHost, PublicServerPort)
+	if err := publicHTTPServer.ListenAndServe(); err != nil {
+		logger.Fatal().Err(err).Msg("Failed to start public API server")
+	}
+}

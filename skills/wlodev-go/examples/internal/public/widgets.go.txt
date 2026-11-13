@@ -1,0 +1,267 @@
+package public
+
+import (
+	"api/auth"
+	"api/database/postgres/dbmodels"
+	"api/database/postgres/queries"
+	"api/internal/models"
+	"api/services/widgets"
+	"api/utils"
+	"context"
+	"database/sql"
+	"time"
+
+	"github.com/cockroachdb/errors"
+	"github.com/wlodev-labs/go/pagination"
+	"github.com/wlodev-labs/go/postgres"
+	"github.com/wlodev-labs/go/ptr"
+)
+
+func (s *PublicServer) WidgetsCreate(ctx context.Context, request WidgetsCreateRequestObject) (WidgetsCreateResponseObject, error) {
+	authUser, passed := auth.GetAuthUserContext(ctx)
+	if !passed {
+		s.logger.Error().Msg(utils.CriticalAuthenticationPass)
+		return WidgetsCreate401JSONResponse(WidgetsCreate401JSONResponse{
+			UnauthorizedJSONResponse: models.GenericUnauthorizedResponse(models.GenericUnauthorizedResponseParams{}),
+		}), nil
+	}
+
+	widget, err := s.widgets.Create(ctx, authUser.ID, widgets.CreateParams{
+		Name:        request.Body.Name,
+		Description: request.Body.Description,
+		Tags:        request.Body.Tags,
+	})
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		switch {
+		case errors.Is(err, widgets.ErrInvalidName):
+			return WidgetsCreate400JSONResponse(WidgetsCreate400JSONResponse{
+				Error: models.WidgetsCreate400Error{
+					Code: models.WidgetsCreate400ErrorCodeInvalidName,
+				},
+			}), nil
+		case errors.Is(err, widgets.ErrInvalidDescription):
+			return WidgetsCreate400JSONResponse(WidgetsCreate400JSONResponse{
+				Error: models.WidgetsCreate400Error{
+					Code: models.WidgetsCreate400ErrorCodeInvalidDescription,
+				},
+			}), nil
+		default:
+			return WidgetsCreate500JSONResponse(WidgetsCreate500JSONResponse{
+				InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+			}), nil
+		}
+	}
+	return WidgetsCreate200JSONResponse(models.ToWidgetGet(widget, models.ToWidgetGetParams{})), nil
+}
+
+func (s *PublicServer) WidgetsList(ctx context.Context, request WidgetsListRequestObject) (WidgetsListResponseObject, error) {
+	authUser, passed := auth.GetAuthUserContext(ctx)
+	if !passed {
+		s.logger.Error().Msg(utils.CriticalAuthenticationPass)
+		return WidgetsList401JSONResponse(WidgetsList401JSONResponse{
+			UnauthorizedJSONResponse: models.GenericUnauthorizedResponse(models.GenericUnauthorizedResponseParams{}),
+		}), nil
+	}
+
+	pag, err := s.pagination.Parse(pagination.ParseParams{
+		Limit: request.Params.Limit,
+		Until: request.Params.Until,
+		Since: request.Params.Since,
+	})
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		if errors.Is(err, pagination.ErrInvalidLimit) {
+			return WidgetsList400JSONResponse(WidgetsList400JSONResponse{
+				Error: models.Pagination400Error{
+					Code: models.Pagination400ErrorCodeInvalidLimit,
+				},
+			}), nil
+		}
+		return WidgetsList500JSONResponse(WidgetsList500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+
+	items, err := s.db.WidgetsSelectUserPaginatedWidgets(authUser.ID, pag, queries.WidgetsSelectUserPaginatedWidgetsParams{})
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		return WidgetsList500JSONResponse(WidgetsList500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+
+	data := make([]models.WidgetGet, len(items))
+	for i, item := range items {
+		data[i] = models.ToWidgetGet(item, models.ToWidgetGetParams{})
+	}
+
+	// Must use the same column as the query's TimeColumn and ORDER BY.
+	paginationResponse := pagination.GetResponseData(items, func(w *dbmodels.Widget) time.Time {
+		return w.CreatedAt
+	})
+
+	return WidgetsList200JSONResponse(WidgetsList200JSONResponse{
+		Data:       data,
+		Pagination: models.ToPagination(paginationResponse, models.ToPaginationParams{}),
+	}), nil
+}
+
+func (s *PublicServer) WidgetsGet(ctx context.Context, request WidgetsGetRequestObject) (WidgetsGetResponseObject, error) {
+	authUser, passed := auth.GetAuthUserContext(ctx)
+	if !passed {
+		s.logger.Error().Msg(utils.CriticalAuthenticationPass)
+		return WidgetsGet401JSONResponse(WidgetsGet401JSONResponse{
+			UnauthorizedJSONResponse: models.GenericUnauthorizedResponse(models.GenericUnauthorizedResponseParams{}),
+		}), nil
+	}
+
+	widget, err := s.db.WidgetsSelectWidgetByUserIDAndPublicID(authUser.ID, request.WidgetID)
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		if errors.Is(err, sql.ErrNoRows) {
+			return WidgetsGet404JSONResponse(WidgetsGet404JSONResponse{
+				Error: models.Widgets404Error{
+					Code: models.Widgets404ErrorCodeWidgetNotFound,
+				},
+			}), nil
+		}
+		return WidgetsGet500JSONResponse(WidgetsGet500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+	return WidgetsGet200JSONResponse(models.ToWidgetGet(widget, models.ToWidgetGetParams{})), nil
+}
+
+func (s *PublicServer) WidgetsUpdate(ctx context.Context, request WidgetsUpdateRequestObject) (WidgetsUpdateResponseObject, error) {
+	authUser, passed := auth.GetAuthUserContext(ctx)
+	if !passed {
+		s.logger.Error().Msg(utils.CriticalAuthenticationPass)
+		return WidgetsUpdate401JSONResponse(WidgetsUpdate401JSONResponse{
+			UnauthorizedJSONResponse: models.GenericUnauthorizedResponse(models.GenericUnauthorizedResponseParams{}),
+		}), nil
+	}
+
+	widget, err := s.db.WidgetsSelectWidgetByUserIDAndPublicID(authUser.ID, request.WidgetID)
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		if errors.Is(err, sql.ErrNoRows) {
+			return WidgetsUpdate404JSONResponse(WidgetsUpdate404JSONResponse{
+				Error: models.Widgets404Error{
+					Code: models.Widgets404ErrorCodeWidgetNotFound,
+				},
+			}), nil
+		}
+		return WidgetsUpdate500JSONResponse(WidgetsUpdate500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+
+	// nil pointer in the body = field not sent = UpdateField{Set: false}.
+	updatePayload := dbmodels.WidgetUpdatePayload{}
+	if request.Body.Name != nil {
+		if err := widgets.ValidateName(*request.Body.Name); err != nil {
+			s.logger.Error().Err(err).Send()
+			return WidgetsUpdate400JSONResponse(WidgetsUpdate400JSONResponse{
+				Error: models.WidgetsUpdate400Error{
+					Code: models.WidgetsUpdate400ErrorCodeInvalidName,
+				},
+			}), nil
+		}
+		updatePayload.Name = postgres.UpdateField[string]{
+			Set:   true,
+			Value: request.Body.Name,
+		}
+	}
+
+	if request.Body.Description != nil {
+		if err := widgets.ValidateDescription(*request.Body.Description); err != nil {
+			s.logger.Error().Err(err).Send()
+			return WidgetsUpdate400JSONResponse(WidgetsUpdate400JSONResponse{
+				Error: models.WidgetsUpdate400Error{
+					Code: models.WidgetsUpdate400ErrorCodeInvalidDescription,
+				},
+			}), nil
+		}
+		updatePayload.Description = postgres.UpdateField[string]{
+			Set:   true,
+			Value: request.Body.Description,
+		}
+	}
+
+	if request.Body.Tags != nil {
+		updatePayload.Tags = postgres.UpdateField[[]string]{
+			Set:   true,
+			Value: request.Body.Tags,
+		}
+	}
+
+	if request.Body.Status != nil {
+		// Generated enums have Valid(); the strict server does NOT validate
+		// enum values in JSON bodies for you.
+		if !request.Body.Status.Valid() {
+			return WidgetsUpdate400JSONResponse(WidgetsUpdate400JSONResponse{
+				Error: models.WidgetsUpdate400Error{
+					Code: models.WidgetsUpdate400ErrorCodeInvalidStatus,
+				},
+			}), nil
+		}
+		status := dbmodels.WidgetStatus(*request.Body.Status)
+		updatePayload.Status = postgres.UpdateField[dbmodels.WidgetStatus]{
+			Set:   true,
+			Value: &status,
+		}
+	}
+
+	// Check emptiness BEFORE bumping updated_at, otherwise it is never empty.
+	if postgres.IsUpdatePayloadEmpty(updatePayload) {
+		s.logger.Info().Msg("no fields to update in the request body")
+		return WidgetsUpdate200JSONResponse(models.ToWidgetGet(widget, models.ToWidgetGetParams{})), nil
+	}
+	updatePayload.UpdatedAt = postgres.UpdateField[time.Time]{
+		Set:   true,
+		Value: ptr.Time(time.Now().UTC()),
+	}
+
+	updatedWidget := &dbmodels.Widget{}
+	if err := s.db.WidgetsUpdateWidget(updatedWidget, widget.ID, updatePayload); err != nil {
+		s.logger.Error().Err(err).Send()
+		return WidgetsUpdate500JSONResponse(WidgetsUpdate500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+	return WidgetsUpdate200JSONResponse(models.ToWidgetGet(updatedWidget, models.ToWidgetGetParams{})), nil
+}
+
+func (s *PublicServer) WidgetsDelete(ctx context.Context, request WidgetsDeleteRequestObject) (WidgetsDeleteResponseObject, error) {
+	authUser, passed := auth.GetAuthUserContext(ctx)
+	if !passed {
+		s.logger.Error().Msg(utils.CriticalAuthenticationPass)
+		return WidgetsDelete401JSONResponse(WidgetsDelete401JSONResponse{
+			UnauthorizedJSONResponse: models.GenericUnauthorizedResponse(models.GenericUnauthorizedResponseParams{}),
+		}), nil
+	}
+
+	widget, err := s.db.WidgetsSelectWidgetByUserIDAndPublicID(authUser.ID, request.WidgetID)
+	if err != nil {
+		s.logger.Error().Err(err).Send()
+		if errors.Is(err, sql.ErrNoRows) {
+			return WidgetsDelete404JSONResponse(WidgetsDelete404JSONResponse{
+				Error: models.Widgets404Error{
+					Code: models.Widgets404ErrorCodeWidgetNotFound,
+				},
+			}), nil
+		}
+		return WidgetsDelete500JSONResponse(WidgetsDelete500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+
+	if err := s.db.WidgetsDeleteWidget(widget.ID); err != nil {
+		s.logger.Error().Err(err).Send()
+		return WidgetsDelete500JSONResponse(WidgetsDelete500JSONResponse{
+			InternalServerErrorJSONResponse: models.GenericInternalServerErrorResponse(models.GenericInternalServerErrorResponseParams{}),
+		}), nil
+	}
+	return WidgetsDelete200Response(WidgetsDelete200Response{}), nil
+}

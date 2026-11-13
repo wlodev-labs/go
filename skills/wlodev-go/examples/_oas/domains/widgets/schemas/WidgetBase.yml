@@ -1,0 +1,15 @@
+# Every property, nothing required. Not registered in models.openapi.yml:
+# it is a building block inlined into Create/Get/Update.
+type: object
+properties:
+    name:
+        type: string
+        description: The name of the widget
+    description:
+        type: string
+        description: A longer, optional description of the widget
+    tags:
+        type: array
+        description: A list of tags associated with the widget
+        items:
+            type: string

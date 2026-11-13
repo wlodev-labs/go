@@ -1,0 +1,77 @@
+package postgresdb
+
+import (
+	"api/database/postgres/queries"
+	"api/utils"
+	"context"
+	"os"
+
+	"github.com/cockroachdb/errors"
+	"github.com/jmoiron/sqlx"
+	"github.com/wlodev-labs/go/postgres"
+)
+
+type Client struct {
+	*sqlx.DB
+	*queries.Queries
+}
+
+type TxClient struct {
+	*sqlx.Tx
+	*queries.Queries
+}
+
+func New(ctx context.Context) (*Client, error) {
+	host, ok := os.LookupEnv("DB_HOST")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_HOST")
+	}
+
+	port, ok := os.LookupEnv("DB_PORT")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_PORT")
+	}
+
+	user, ok := os.LookupEnv("DB_USER")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_USER")
+	}
+
+	password, ok := os.LookupEnv("DB_PASSWORD")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_PASSWORD")
+	}
+
+	dbname, ok := os.LookupEnv("DB_NAME")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_NAME")
+	}
+
+	sslmode, ok := os.LookupEnv("DB_SSL_MODE")
+	if !ok {
+		return nil, utils.FormatMissingEnvVarError("DB_SSL_MODE")
+	}
+
+	db, err := postgres.Open(ctx, host, port, user, password, dbname, sslmode)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
+		DB:      db,
+		Queries: queries.New(db),
+	}, nil
+}
+
+// Begin starts a transaction. The returned TxClient exposes the same query
+// methods as Client, so code can switch between them without changes.
+func (c *Client) Begin() (*TxClient, error) {
+	tx, err := c.DB.Beginx()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &TxClient{
+		Tx:      tx,
+		Queries: queries.New(tx),
+	}, nil
+}

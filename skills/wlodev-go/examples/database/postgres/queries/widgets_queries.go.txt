@@ -1,0 +1,84 @@
+package queries
+
+import (
+	"api/database/postgres/dbmodels"
+
+	"github.com/wlodev-labs/go/pagination"
+	"github.com/wlodev-labs/go/postgres"
+)
+
+func (q *Queries) WidgetsInsertWidget(dest *dbmodels.Widget, payload dbmodels.WidgetInsertPayload) error {
+	return q.InsertWithDest(dest, postgres.GetColumns(dbmodels.WidgetColumns), `
+        INSERT INTO widgets (
+            public_id,
+            user_id,
+            name,
+            description,
+            tags
+        ) VALUES ($1, $2, $3, $4, $5)
+    `, payload.PublicID, payload.UserID, payload.Name, payload.Description, payload.Tags)
+}
+
+func (q *Queries) WidgetsUpdateWidget(dest *dbmodels.Widget, widgetID int, payload dbmodels.WidgetUpdatePayload) error {
+	query, args, err := q.BuildUpdateQuery("widgets", payload, []postgres.WhereCondition{
+		{
+			Clause: "id = ?",
+			Args:   []any{widgetID},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return q.UpdateWithDest(dest, postgres.GetColumns(dbmodels.WidgetColumns), query, args...)
+}
+
+func (q *Queries) WidgetsSelectWidgetByUserIDAndPublicID(userID int, publicID string) (*dbmodels.Widget, error) {
+	widget := &dbmodels.Widget{}
+	return widget, q.Get(widget, `
+        SELECT
+            `+postgres.GetColumns(dbmodels.WidgetColumns)+`
+        FROM widgets
+        WHERE
+            user_id = $1 AND
+            public_id = $2
+    `, userID, publicID)
+}
+
+type WidgetsSelectUserPaginatedWidgetsParams struct{}
+
+func (q *Queries) WidgetsSelectUserPaginatedWidgets(userID int, pag *pagination.Parsed, params WidgetsSelectUserPaginatedWidgetsParams) ([]*dbmodels.Widget, error) {
+	var widgets []*dbmodels.Widget
+	whereClause, args := q.BuildWhereClause(
+		[]postgres.WhereCondition{
+			{
+				Clause: "user_id = ?",
+				Args:   []any{userID},
+			},
+		},
+		postgres.BuildWhereClauseParams{
+			Pagination: &postgres.BuildWhereClausePaginationParams{
+				Parsed:     pag,
+				TimeColumn: "created_at",
+			},
+		},
+	)
+
+	// "?" placeholders everywhere (including LIMIT) + Rebind, because
+	// BuildWhereClause emits "?".
+	args = append(args, pag.Limit)
+	return widgets, q.Select(&widgets, q.Rebind(`
+        SELECT
+            `+postgres.GetColumns(dbmodels.WidgetColumns)+`
+        FROM widgets
+        `+whereClause+`
+        ORDER BY created_at DESC
+        LIMIT ?
+    `), args...)
+}
+
+func (q *Queries) WidgetsDeleteWidget(widgetID int) error {
+	return q.Delete(`
+        DELETE FROM widgets
+        WHERE id = $1
+    `, widgetID)
+}

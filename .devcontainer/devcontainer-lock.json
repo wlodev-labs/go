@@ -1,0 +1,14 @@
+{
+  "features": {
+    "ghcr.io/wlodev-labs/devcontainer-features/claude-sandbox:1": {
+      "version": "1.2.0",
+      "resolved": "ghcr.io/wlodev-labs/devcontainer-features/claude-sandbox@sha256:28421839c76d846c8ed3c0902ea3dad65438d0204fb8cb12730ef73b23aad114",
+      "integrity": "sha256:28421839c76d846c8ed3c0902ea3dad65438d0204fb8cb12730ef73b23aad114"
+    },
+    "ghcr.io/wlodev-labs/devcontainer-features/go-stack:1": {
+      "version": "1.0.0",
+      "resolved": "ghcr.io/wlodev-labs/devcontainer-features/go-stack@sha256:89df318171a89287b365919b1bdebbd8ca2e1eb9b0bf970b20bf642744747686",
+      "integrity": "sha256:89df318171a89287b365919b1bdebbd8ca2e1eb9b0bf970b20bf642744747686"
+    }
+  }
+}

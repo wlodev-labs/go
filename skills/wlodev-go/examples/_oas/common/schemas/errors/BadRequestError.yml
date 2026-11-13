@@ -1,0 +1,12 @@
+allOf:
+    - $ref: '../BaseError.yml'
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - bad_request
+
+example:
+    code: bad_request
+    message: Provided parameters are invalid.

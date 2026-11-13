@@ -1,0 +1,77 @@
+// Package widgets holds widget business rules shared by HTTP handlers and any
+// other caller (jobs, LLM tools). It returns dbmodels; handlers map to API
+// models.
+package widgets
+
+import (
+	postgresdb "api/database/postgres"
+	"api/database/postgres/dbmodels"
+	"api/utils/validate"
+	"context"
+
+	"github.com/cockroachdb/errors"
+	"github.com/rs/zerolog"
+	"github.com/wlodev-labs/go/publicid"
+)
+
+var ErrInvalidName = errors.New("invalid name")
+var ErrInvalidDescription = errors.New("invalid description")
+
+type Service struct {
+	logger zerolog.Logger
+	db     *postgresdb.Client
+}
+
+func New(
+	logger zerolog.Logger,
+	db *postgresdb.Client,
+) *Service {
+	return &Service{
+		logger: logger,
+		db:     db,
+	}
+}
+
+type CreateParams struct {
+	Name        string
+	Description *string
+	Tags        *[]string
+}
+
+func (s *Service) Create(ctx context.Context, userID int, params CreateParams) (*dbmodels.Widget, error) {
+	if err := ValidateName(params.Name); err != nil {
+		return nil, errors.Wrap(ErrInvalidName, err.Error())
+	}
+
+	if params.Description != nil {
+		if err := ValidateDescription(*params.Description); err != nil {
+			return nil, errors.Wrap(ErrInvalidDescription, err.Error())
+		}
+	}
+
+	publicID, err := publicid.New(publicid.NewParams{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	widget := &dbmodels.Widget{}
+	if err := s.db.WidgetsInsertWidget(widget, dbmodels.WidgetInsertPayload{
+		PublicID:    publicID,
+		UserID:      userID,
+		Name:        params.Name,
+		Description: params.Description,
+		Tags:        params.Tags,
+	}); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return widget, nil
+}
+
+// Limits mirror the column sizes in the widgets migration.
+func ValidateName(name string) error {
+	return validate.Field(name, "min=1,max=255")
+}
+
+func ValidateDescription(description string) error {
+	return validate.Field(description, "max=2048")
+}

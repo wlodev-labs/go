@@ -1,0 +1,6 @@
+type: string
+enum:
+    - active
+    - archived
+description: The lifecycle status of the widget
+example: active

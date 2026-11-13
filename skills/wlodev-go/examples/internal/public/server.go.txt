@@ -1,0 +1,30 @@
+package public
+
+import (
+	postgresdb "api/database/postgres"
+	"api/services/widgets"
+
+	"github.com/rs/zerolog"
+	"github.com/wlodev-labs/go/pagination"
+)
+
+type PublicServer struct {
+	logger     zerolog.Logger
+	db         *postgresdb.Client
+	pagination *pagination.Client
+	widgets    *widgets.Service
+}
+
+func NewPublicServer(
+	logger zerolog.Logger,
+	db *postgresdb.Client,
+	pagination *pagination.Client,
+	widgetsService *widgets.Service,
+) *PublicServer {
+	return &PublicServer{
+		logger:     logger,
+		db:         db,
+		pagination: pagination,
+		widgets:    widgetsService,
+	}
+}

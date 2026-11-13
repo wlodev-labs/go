@@ -1,0 +1,10 @@
+allOf:
+    - $ref: ../../../../models.openapi.yml#/components/schemas/BaseError
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - 'invalid_name'
+                  - 'invalid_description'
+                  - 'invalid_tags'

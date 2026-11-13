@@ -1,0 +1,82 @@
+post:
+    operationId: widgetsCreate
+    summary: Create a new widget
+    description: Create a new widget owned by the authenticated user.
+    tags:
+        - Widgets
+    security:
+        - sessionAuth: []
+    requestBody:
+        required: true
+        content:
+            application/json:
+                schema:
+                    $ref: '../../models.openapi.yml#/components/schemas/WidgetCreate'
+    responses:
+        '200':
+            description: Widget created successfully
+            content:
+                application/json:
+                    schema:
+                        $ref: '../../models.openapi.yml#/components/schemas/WidgetGet'
+        '400':
+            description: Something went wrong with the request
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/WidgetsCreate400Error'
+        '401':
+            $ref: ../../models.openapi.yml#/components/responses/Unauthorized
+        '500':
+            $ref: ../../models.openapi.yml#/components/responses/InternalServerError
+
+get:
+    operationId: widgetsList
+    summary: List widgets
+    description: List the authenticated user's widgets, newest first.
+    tags:
+        - Widgets
+        - Pagination
+    security:
+        - sessionAuth: []
+    parameters:
+        - $ref: '../../models.openapi.yml#/components/parameters/since'
+        - $ref: '../../models.openapi.yml#/components/parameters/until'
+        - $ref: '../../models.openapi.yml#/components/parameters/limit'
+    responses:
+        '200':
+            description: A list of widgets retrieved successfully
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - data
+                            - pagination
+                        properties:
+                            data:
+                                type: array
+                                items:
+                                    $ref: '../../models.openapi.yml#/components/schemas/WidgetGet'
+                            pagination:
+                                $ref: '../../models.openapi.yml#/components/schemas/Pagination'
+        '400':
+            description: Something went wrong with the request
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/Pagination400Error'
+        '401':
+            $ref: ../../models.openapi.yml#/components/responses/Unauthorized
+        '500':
+            $ref: ../../models.openapi.yml#/components/responses/InternalServerError

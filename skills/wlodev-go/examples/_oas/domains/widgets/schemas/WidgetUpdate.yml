@@ -1,0 +1,8 @@
+# PATCH body: everything optional (→ *T in Go). Update-only fields go in an
+# extra allOf item.
+allOf:
+    - $ref: './WidgetBase.yml'
+    - type: object
+      properties:
+          status:
+              $ref: './WidgetStatus.yml'

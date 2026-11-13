@@ -1,0 +1,62 @@
+openapi: 3.0.3
+info:
+    title: Example Models
+    version: 0.0.0
+servers:
+    - url: 'http://localhost:5050'
+      description: Local server
+# The registry: no paths. Every component that must become a named Go type in
+# internal/models is listed here and $refs its own file.
+paths: {}
+components:
+    securitySchemes:
+        sessionAuth:
+            type: apiKey
+            in: cookie
+            name: AccessToken
+            description: Session authentication using a cookie.
+    parameters:
+        # common
+        limit:
+            $ref: common/parameters/pagination-parameters.yml#/limit
+        until:
+            $ref: common/parameters/pagination-parameters.yml#/until
+        since:
+            $ref: common/parameters/pagination-parameters.yml#/since
+        # widgets
+        widgetId:
+            $ref: domains/widgets/parameters/widgets-parameters.yml#/widgetId
+    schemas:
+        # common
+        BaseError:
+            $ref: common/schemas/BaseError.yml
+        Pagination:
+            $ref: common/schemas/Pagination.yml
+        Pagination400Error:
+            $ref: common/schemas/errors/Pagination400Error.yml
+        # widgets
+        WidgetGet:
+            $ref: domains/widgets/schemas/WidgetGet.yml
+        WidgetCreate:
+            $ref: domains/widgets/schemas/WidgetCreate.yml
+        WidgetUpdate:
+            $ref: domains/widgets/schemas/WidgetUpdate.yml
+        WidgetStatus:
+            $ref: domains/widgets/schemas/WidgetStatus.yml
+        Widgets404Error:
+            $ref: domains/widgets/schemas/errors/Widgets404Error.yml
+        WidgetsCreate400Error:
+            $ref: domains/widgets/schemas/errors/WidgetsCreate400Error.yml
+        WidgetsUpdate400Error:
+            $ref: domains/widgets/schemas/errors/WidgetsUpdate400Error.yml
+    responses:
+        BadRequest:
+            $ref: common/responses/errors/BadRequest.yml
+        Unauthorized:
+            $ref: common/responses/errors/Unauthorized.yml
+        Forbidden:
+            $ref: common/responses/errors/Forbidden.yml
+        NotFound:
+            $ref: common/responses/errors/NotFound.yml
+        InternalServerError:
+            $ref: common/responses/errors/InternalServerError.yml

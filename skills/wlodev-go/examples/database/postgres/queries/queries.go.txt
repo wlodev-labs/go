@@ -1,0 +1,13 @@
+package queries
+
+import "github.com/wlodev-labs/go/postgres"
+
+type Queries struct {
+	*postgres.Queries
+}
+
+func New(e postgres.SQLExecutor) *Queries {
+	return &Queries{
+		Queries: postgres.NewQueries(e),
+	}
+}

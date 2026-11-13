@@ -1,0 +1,7 @@
+widgetId:
+    name: widgetId
+    in: path
+    description: The unique public identifier of the widget.
+    required: true
+    schema:
+        type: string

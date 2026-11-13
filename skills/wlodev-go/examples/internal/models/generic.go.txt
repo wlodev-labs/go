@@ -1,0 +1,91 @@
+package models
+
+type GenericBadRequestResponseParams struct {
+	Message *string `json:"message"`
+}
+
+func GenericBadRequestResponse(params GenericBadRequestResponseParams) BadRequestJSONResponse {
+	var message *string
+	if params.Message != nil {
+		message = params.Message
+	}
+
+	return BadRequestJSONResponse{
+		Error: BadRequestError{
+			Code:    BadRequestErrorCodeBadRequest,
+			Message: message,
+		},
+	}
+}
+
+type GenericUnauthorizedResponseParams struct {
+	Message *string `json:"message"`
+}
+
+func GenericUnauthorizedResponse(params GenericUnauthorizedResponseParams) UnauthorizedJSONResponse {
+	var message *string
+	if params.Message != nil {
+		message = params.Message
+	}
+
+	return UnauthorizedJSONResponse{
+		Error: UnauthorizedError{
+			Code:    UnauthorizedErrorCodeUnauthorized,
+			Message: message,
+		},
+	}
+}
+
+type GenericNotFoundResponseParams struct {
+	Message *string `json:"message"`
+}
+
+func GenericNotFoundResponse(params GenericNotFoundResponseParams) NotFoundJSONResponse {
+	var message *string
+	if params.Message != nil {
+		message = params.Message
+	}
+
+	return NotFoundJSONResponse{
+		Error: NotFoundError{
+			Code:    NotFoundErrorCodeNotFound,
+			Message: message,
+		},
+	}
+}
+
+type GenericForbiddenResponseParams struct {
+	Message *string `json:"message"`
+}
+
+func GenericForbiddenResponse(params GenericForbiddenResponseParams) ForbiddenJSONResponse {
+	var message *string
+	if params.Message != nil {
+		message = params.Message
+	}
+
+	return ForbiddenJSONResponse{
+		Error: ForbiddenError{
+			Code:    ForbiddenErrorCodeForbidden,
+			Message: message,
+		},
+	}
+}
+
+type GenericInternalServerErrorResponseParams struct {
+	Message *string `json:"message"`
+}
+
+func GenericInternalServerErrorResponse(params GenericInternalServerErrorResponseParams) InternalServerErrorJSONResponse {
+	var message *string
+	if params.Message != nil {
+		message = params.Message
+	}
+
+	return InternalServerErrorJSONResponse{
+		Error: InternalServerErr{
+			Code:    InternalServerErrCodeInternalServerError,
+			Message: message,
+		},
+	}
+}

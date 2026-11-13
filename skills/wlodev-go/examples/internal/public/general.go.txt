@@ -1,0 +1,10 @@
+package public
+
+import "context"
+
+// Public endpoint: `security: []` in the spec, so no auth guard here.
+func (s *PublicServer) GeneralHealthGet(ctx context.Context, request GeneralHealthGetRequestObject) (GeneralHealthGetResponseObject, error) {
+	return GeneralHealthGet200JSONResponse(GeneralHealthGet200JSONResponse{
+		Status: "ok",
+	}), nil
+}

@@ -1,0 +1,31 @@
+package models
+
+import (
+	"api/database/postgres/dbmodels"
+
+	"github.com/wlodev-labs/go/pagination"
+)
+
+type ToPaginationParams struct{}
+
+func ToPagination(paginationResponse *pagination.Response, params ToPaginationParams) Pagination {
+	return Pagination{
+		Count: paginationResponse.Count,
+		Next:  paginationResponse.Next,
+		Prev:  paginationResponse.Prev,
+	}
+}
+
+type ToWidgetGetParams struct{}
+
+func ToWidgetGet(dbWidget *dbmodels.Widget, params ToWidgetGetParams) WidgetGet {
+	return WidgetGet{
+		ID:          dbWidget.PublicID, // the API id is always the public id
+		Name:        dbWidget.Name,
+		Description: dbWidget.Description,
+		Tags:        dbWidget.Tags,
+		Status:      WidgetStatus(dbWidget.Status),
+		UpdatedAt:   dbWidget.UpdatedAt,
+		CreatedAt:   dbWidget.CreatedAt,
+	}
+}

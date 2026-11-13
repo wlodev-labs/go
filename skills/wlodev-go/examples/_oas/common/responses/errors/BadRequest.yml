@@ -1,0 +1,10 @@
+description: BadRequest
+content:
+    application/json:
+        schema:
+            type: object
+            required:
+                - error
+            properties:
+                error:
+                    $ref: ../../schemas/errors/BadRequestError.yml

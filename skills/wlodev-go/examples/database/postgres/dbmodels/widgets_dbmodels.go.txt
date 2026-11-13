@@ -1,0 +1,58 @@
+package dbmodels
+
+import (
+	"time"
+
+	"github.com/wlodev-labs/go/postgres"
+)
+
+type WidgetStatus string
+
+const (
+	WidgetStatusActive   WidgetStatus = "active"
+	WidgetStatusArchived WidgetStatus = "archived"
+)
+
+type Widget struct {
+	ID          int          `db:"id"`
+	PublicID    string       `db:"public_id"`
+	UserID      int          `db:"user_id"`
+	Name        string       `db:"name"`
+	Description *string      `db:"description"`
+	Tags        *[]string    `db:"tags"`
+	Status      WidgetStatus `db:"status"`
+	UpdatedAt   time.Time    `db:"updated_at"`
+	CreatedAt   time.Time    `db:"created_at"`
+}
+
+// WidgetColumns lists every column of Widget in table order. Use it with
+// postgres.GetColumns for SELECT and RETURNING; never SELECT *.
+var WidgetColumns = []string{
+	"id",
+	"public_id",
+	"user_id",
+	"name",
+	"description",
+	"tags",
+	"status",
+	"updated_at",
+	"created_at",
+}
+
+type WidgetInsertPayload struct {
+	PublicID    string
+	UserID      int
+	Name        string
+	Description *string
+	Tags        *[]string
+}
+
+// WidgetUpdatePayload is consumed by BuildUpdateQuery: only fields with Set
+// true end up in the SET clause; Value nil writes NULL.
+type WidgetUpdatePayload struct {
+	Name        postgres.UpdateField[string]       `db:"name"`
+	Description postgres.UpdateField[string]       `db:"description"`
+	Tags        postgres.UpdateField[[]string]     `db:"tags"`
+	Status      postgres.UpdateField[WidgetStatus] `db:"status"`
+	UpdatedAt   postgres.UpdateField[time.Time]    `db:"updated_at"`
+}

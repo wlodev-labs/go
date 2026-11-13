@@ -1,0 +1,5 @@
+allOf:
+    - $ref: './WidgetBase.yml'
+    - type: object
+      required:
+          - name

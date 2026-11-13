@@ -1,0 +1,64 @@
+---
+name: wlodev-go
+description: House conventions for every wlodev Go service (std-http + oapi-codegen strict server, sqlx/Postgres, goose migrations, github.com/wlodev-labs/go shared lib). Use whenever you write, review, or generate Go code in such a project, edit anything under _oas/ (models.openapi.yml, public.openapi.yml, domains/**), add or change an endpoint, run or debug oapi-codegen / redocly, write SQL queries, dbmodels or migrations, add a service client under services/, or create new packages or files.
+---
+
+# wlodev Go service conventions
+
+Every wlodev Go service has the same shape. Follow these rules so all projects look as if one person wrote them. If the code in the current project contradicts a rule, match the project and point out the difference to the user. Do not "fix" it silently.
+
+Describes `github.com/wlodev-labs/go` **≥ v0.3.1** (`publicid` requires the first release after v0.3.1) and `oapi-codegen/v2` **v2.8.x** (std-http + strict).
+
+## Routing: read the reference before you touch the area
+
+| Task | Read first |
+|---|---|
+| Unsure where a file belongs | [references/project-layout.md](references/project-layout.md) |
+| Add or change an endpoint, schema, parameter or error code | [references/openapi-spec.md](references/openapi-spec.md), then [references/openapi-quirks.md](references/openapi-quirks.md) |
+| Run or change codegen, `generate.go`, import mapping, templates | [references/oapi-codegen.md](references/oapi-codegen.md) |
+| Implement a handler in `internal/public` | [references/handlers.md](references/handlers.md) |
+| Migrations, dbmodels, queries, transactions | [references/database.md](references/database.md) |
+| New external client or domain service in `services/` | [references/services.md](references/services.md) |
+| `utils/`: env, error responses, public IDs, validation | [references/utils.md](references/utils.md) |
+| Naming, Params structs, errors, logging | [references/style.md](references/style.md) |
+| Any `wlodev-labs/go` helper (`postgres`, `pagination`, `ptr`, `publicid`, `zerolog`) | [references/lib.md](references/lib.md) |
+
+Complete, consistent example files for a `widgets` domain are in [examples/](examples/). Copy their shape.
+
+## Adding an endpoint: the order of work
+
+1. **Migration**: `make -C database/postgres create ARGS=widgets` (goose), with `id SERIAL`, `public_id VARCHAR(12) UNIQUE`, `updated_at`, `created_at`.
+2. **Spec, domain files**: `_oas/domains/widgets/{widgets.yml,widget.yml}`, `parameters/widgets-parameters.yml`, `schemas/Widget{Base,Create,Get,Update}.yml`, `schemas/errors/Widgets*Error.yml`.
+3. **Spec, registry**: register every new schema and parameter in `_oas/models.openapi.yml`, then add the paths to `_oas/public.openapi.yml`.
+4. **Generate**: `make openapi` (redocly bundle, then `go run scripts/openapi/generate/generate.go`). Never edit `*.gen.go`.
+5. **dbmodels**: struct, `WidgetColumns`, `WidgetInsertPayload`, and `WidgetUpdatePayload` (fields of type `postgres.UpdateField`).
+6. **queries**: `WidgetsInsertWidget`, `WidgetsSelectWidgetByUserIDAndPublicID`, `WidgetsSelectUserPaginatedWidgets`, `WidgetsUpdateWidget`, `WidgetsDeleteWidget`.
+7. **Mapping**: `models.ToWidgetGet(dbWidget, models.ToWidgetGetParams{})` in `internal/models/mappings.go`.
+8. **Handlers**: `internal/public/widgets.go`, which implements the generated `StrictServerInterface` methods.
+9. `go build ./... && go vet ./...`
+
+## Core rules
+
+### OpenAPI (`_oas/`)
+- ✅ `models.openapi.yml` is the **registry** (`paths: {}`). Every schema, parameter, response or security scheme that must become a named Go type is registered under `components`.
+- ✅ Operation files (`domains/*/*.yml`) reference components **only** through `../../models.openapi.yml#/components/...`.
+- ❌ Never `$ref` a schema file directly from an operation, because you get anonymous inline types. Building blocks *inside* schema files (`./WidgetBase.yml`, `../../../common/schemas/Timestamp.yml`) are referenced by relative path.
+- ✅ The schema quartet is `XBase` (properties, no `required`), `XCreate` (Base + required), `XGet` (Base + required + `id`, `createdAt`, `updatedAt`) and `XUpdate` (Base only, every field optional, used for PATCH).
+- ✅ `operationId` is camelCase `<domain><Action>`: `widgetsCreate`, `widgetsList`, `widgetsGet`, `widgetsUpdate`, `widgetsDelete`.
+- ✅ Every operation has `summary`, `description`, `tags` and **an explicit `security`**: `sessionAuth: []`, or `security: []` for public endpoints.
+- ✅ Error body is `{ error: { code, message? } }`. Domain 400/404 errors are `allOf: [BaseError, {code: enum}]` with snake_case codes (`invalid_title`, `widget_not_found`). 401/500 use `components/responses`.
+- ✅ Lists take `since`, `until` and `limit` and return `{ data: [...], pagination: Pagination }`.
+- ✅ 4-space YAML indent, quoted status codes, `.yml` extension, schema files in PascalCase, path and parameter files in kebab-case.
+
+### Go
+- ✅ Handlers **never return a Go `error`**. Every failure becomes a typed response (`Widgets404JSONResponse{...}`, `nil`), and you log it first with `s.logger.Error().Err(err).Send()`.
+- ✅ Handlers that require auth start with `auth.GetAuthUserContext(ctx)`. If that fails, log `utils.CriticalAuthenticationPass` and return 401.
+- ✅ Map sentinel errors to error codes with `errors.Is` in a `switch`. `sql.ErrNoRows` maps to 404 and `pagination.ErrInvalidLimit` maps to `Pagination400Error`.
+- ✅ Errors come from `github.com/cockroachdb/errors`: `errors.WithStack(err)` at I/O boundaries and `errors.Wrap(ErrSentinel, err.Error())` to classify. Declare sentinels as `var ErrX = errors.New("...")`.
+- ✅ Functions that may grow take a trailing `XParams` struct, **even an empty one** (`ToWidgetGetParams{}`, `NotesSelectUserPaginatedNotesParams{}`).
+- ✅ Use Go initialisms everywhere: `ID`, `PublicID`, `UserID`, `userID`, `ByUserIDAndPublicID`, `URL`, `API`. ❌ Never `Id`/`Url`/`Api` in Go identifiers. Generated code follows this too, via `NameNormalizer: ToCamelCaseWithInitialisms` in `generate.go`. JSON and URL names stay camelCase (`id`, `widgetId`).
+- ✅ Use the internal `int` id in the DB and expose only `public_id` (12-char nanoid from `github.com/wlodev-labs/go/publicid`) in the API.
+- ✅ Use `time.Now().UTC()` and `ptr.Time(...)` / `ptr.String(...)` for pointers.
+- ✅ Read env with `os.LookupEnv` and return `utils.FormatMissingEnvVarError("NAME")` when a variable is missing. Never default secrets.
+- ✅ Prefer the shared lib to a local copy: `postgres.Queries`, `BuildWhereClause`, `BuildUpdateQuery`, `UpdateField`, `GetColumns`, `pagination.Client`, `publicid`, `wlodev zerolog`.
+- ❌ Never edit `*.gen.go`, `_oas/bundled/*` or migrations that have already been applied. Add a new migration instead.

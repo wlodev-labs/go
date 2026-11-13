@@ -1,0 +1,12 @@
+type: object
+required:
+    - code
+properties:
+    code:
+        type: string
+        description: A short error message code identifying the error type.
+        example: bad_request
+    message:
+        type: string
+        description: A human-readable description of the error.
+        example: The request parameters are invalid.

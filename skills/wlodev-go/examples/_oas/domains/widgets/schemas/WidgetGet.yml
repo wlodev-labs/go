@@ -1,0 +1,20 @@
+allOf:
+    - $ref: './WidgetBase.yml'
+    - type: object
+      required:
+          - name
+    - type: object
+      required:
+          - id
+          - status
+          - updatedAt
+          - createdAt
+      properties:
+          id:
+              $ref: '../../../common/schemas/Id.yml'
+          status:
+              $ref: './WidgetStatus.yml'
+          updatedAt:
+              $ref: '../../../common/schemas/Timestamp.yml'
+          createdAt:
+              $ref: '../../../common/schemas/Timestamp.yml'

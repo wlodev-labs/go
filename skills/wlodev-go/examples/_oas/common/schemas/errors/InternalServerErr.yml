@@ -1,0 +1,12 @@
+allOf:
+    - $ref: '../BaseError.yml'
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - internal_server_error
+
+example:
+    code: internal_server_error
+    message: Unexpected server-side error

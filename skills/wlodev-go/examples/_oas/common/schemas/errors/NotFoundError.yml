@@ -1,0 +1,12 @@
+allOf:
+    - $ref: '../BaseError.yml'
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - not_found
+
+example:
+    code: not_found
+    message: The requested resource was not found.

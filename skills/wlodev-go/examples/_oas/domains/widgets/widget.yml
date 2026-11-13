@@ -1,0 +1,111 @@
+get:
+    operationId: widgetsGet
+    summary: Get a widget by ID
+    description: Get a widget by its public ID.
+    tags:
+        - Widgets
+    security:
+        - sessionAuth: []
+    parameters:
+        - $ref: '../../models.openapi.yml#/components/parameters/widgetId'
+    responses:
+        '200':
+            description: Widget retrieved successfully
+            content:
+                application/json:
+                    schema:
+                        $ref: '../../models.openapi.yml#/components/schemas/WidgetGet'
+        '401':
+            $ref: ../../models.openapi.yml#/components/responses/Unauthorized
+        '404':
+            description: Requested resource was not found
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/Widgets404Error'
+        '500':
+            $ref: ../../models.openapi.yml#/components/responses/InternalServerError
+
+patch:
+    operationId: widgetsUpdate
+    summary: Update a widget by ID
+    description: Partially update a widget. Omitted fields are left unchanged.
+    tags:
+        - Widgets
+    security:
+        - sessionAuth: []
+    parameters:
+        - $ref: '../../models.openapi.yml#/components/parameters/widgetId'
+    requestBody:
+        required: true
+        content:
+            application/json:
+                schema:
+                    $ref: '../../models.openapi.yml#/components/schemas/WidgetUpdate'
+    responses:
+        '200':
+            description: Widget updated successfully
+            content:
+                application/json:
+                    schema:
+                        $ref: '../../models.openapi.yml#/components/schemas/WidgetGet'
+        '400':
+            description: Something went wrong with the request
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/WidgetsUpdate400Error'
+        '401':
+            $ref: ../../models.openapi.yml#/components/responses/Unauthorized
+        '404':
+            description: Requested resource was not found
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/Widgets404Error'
+        '500':
+            $ref: ../../models.openapi.yml#/components/responses/InternalServerError
+
+delete:
+    operationId: widgetsDelete
+    summary: Delete a widget by ID
+    description: Permanently delete a widget.
+    tags:
+        - Widgets
+    security:
+        - sessionAuth: []
+    parameters:
+        - $ref: '../../models.openapi.yml#/components/parameters/widgetId'
+    responses:
+        '200':
+            description: Widget deleted successfully
+        '401':
+            $ref: ../../models.openapi.yml#/components/responses/Unauthorized
+        '404':
+            description: Requested resource was not found
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - error
+                        properties:
+                            error:
+                                $ref: '../../models.openapi.yml#/components/schemas/Widgets404Error'
+        '500':
+            $ref: ../../models.openapi.yml#/components/responses/InternalServerError

@@ -1,0 +1,12 @@
+allOf:
+    - $ref: '../BaseError.yml'
+    - type: object
+      properties:
+          code:
+              type: string
+              enum:
+                  - unauthorized
+
+example:
+    code: unauthorized
+    message: Authentication is required to access this resource.

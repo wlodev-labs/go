@@ -1,0 +1,112 @@
+package main
+
+import (
+	"log"
+	"os"
+	"path/filepath"
+
+	"github.com/oapi-codegen/oapi-codegen/v2/pkg/codegen"
+	"github.com/oapi-codegen/oapi-codegen/v2/pkg/util"
+)
+
+type Config struct {
+	specFilePath   string
+	outputFilePath string
+	codegen        codegen.Configuration
+}
+
+var defaultImportMapping = map[string]string{
+	"../../models.openapi.yml":          "api/internal/models",
+	"../../../models.openapi.yml":       "api/internal/models",
+	"../../../../models.openapi.yml":    "api/internal/models",
+	"../../../../../models.openapi.yml": "api/internal/models",
+}
+
+var defaultGenerateOptions = codegen.GenerateOptions{
+	StdHTTPServer: true,
+	Models:        true,
+	Strict:        true,
+	EmbeddedSpec:  true,
+}
+
+var defaultCompatibilityOptions = codegen.CompatibilityOptions{
+	AlwaysPrefixEnumValues: true,
+}
+
+// Generated names use Go initialisms (Id → ID, Url → URL, Api → API) so they
+// match hand-written code. MUST be identical for every config: public refers
+// to models types by their generated name.
+const nameNormalizer = string(codegen.NameNormalizerFunctionToCamelCaseWithInitialisms)
+
+var defaultOutputOptions = codegen.OutputOptions{
+	SkipPrune:      true,
+	NameNormalizer: nameNormalizer,
+	UserTemplates: map[string]string{
+		// This is a solution for multiple Set-Cookie headers in the OpenAPI spec.
+		// https://github.com/oapi-codegen/oapi-codegen/discussions/1802#discussioncomment-12741049
+		"strict/strict-interface.tmpl": "scripts/openapi/generate/templates/strict/strict-interface.tmpl",
+	},
+}
+
+func main() {
+	configs := []Config{
+		{
+			specFilePath:   "_oas/bundled/models-openapi-bundled.yml",
+			outputFilePath: "./internal/models/models.gen.go",
+			codegen: codegen.Configuration{
+				PackageName: "models",
+				Generate: codegen.GenerateOptions{
+					Models:       true,
+					Strict:       true,
+					EmbeddedSpec: true,
+				},
+				Compatibility: defaultCompatibilityOptions,
+				OutputOptions: codegen.OutputOptions{
+					SkipPrune:      true,
+					NameNormalizer: nameNormalizer,
+				},
+			},
+		},
+		{
+			specFilePath:   "_oas/public.openapi.yml",
+			outputFilePath: "./internal/public/public.gen.go",
+			codegen: codegen.Configuration{
+				PackageName:   "public",
+				Generate:      defaultGenerateOptions,
+				Compatibility: defaultCompatibilityOptions,
+				OutputOptions: defaultOutputOptions,
+				ImportMapping: defaultImportMapping,
+			},
+		},
+	}
+
+	for _, config := range configs {
+		swagger, err := util.LoadSwagger(config.specFilePath)
+		if err != nil {
+			log.Fatalf("Failed to load OpenAPI spec: %v", err)
+		}
+
+		code, err := codegen.Generate(swagger, config.codegen)
+		if err != nil {
+			log.Fatalf("Failed to generate code: %v", err)
+		}
+
+		if err := writeFile(config.outputFilePath, code); err != nil {
+			log.Fatalf("Failed to write generated code to file: %v", err)
+		}
+		log.Printf("Generated: %s", config.outputFilePath)
+	}
+	log.Println("Code generation completed successfully")
+}
+
+func writeFile(path string, content string) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		return err
+	}
+	return nil
+}

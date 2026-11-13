@@ -1,0 +1,25 @@
+type: object
+description: >-
+    Pagination response which provides information about the paginated results and how to query
+    for the next and previous pages of data.
+required:
+    - count
+    - next
+    - prev
+properties:
+    count:
+        type: integer
+        description: Amount of items returned in the current response
+        example: 20
+    next:
+        type: string
+        format: date-time
+        nullable: true
+        description: Timestamp in ISO 8601 that must be used to query the next page of results
+        example: 2021-09-15T14:12:00Z
+    prev:
+        type: string
+        format: date-time
+        nullable: true
+        description: Timestamp in ISO 8601 that must be used to query the previous page of results
+        example: 2021-09-10T09:30:00Z

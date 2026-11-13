@@ -1,0 +1,3 @@
+type: string
+description: Unique identifier for the resource of length 32 characters.
+example: 'DQYX98BfLhjcquNs1u86f0uYsjRMetyL'

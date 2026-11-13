@@ -7,6 +7,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/matoous/go-nanoid/v2 v2.1.0
 	github.com/rs/zerolog v1.35.1
 )
 
