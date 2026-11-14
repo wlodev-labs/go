@@ -12,6 +12,11 @@ rules:
     operation-4xx-response: off
 ```
 
+## Source files vs. generated files
+
+Write only in the source files: `models.openapi.yml`, `public.openapi.yml`, `domains/**` and `common/**`.
+`_oas/bundled/` is **generated** by `make openapi` (redocly bundle). ❌ Never create, edit or patch files there when you add a schema, parameter or endpoint. Your changes would be overwritten on the next bundle. Change the sources and run `make openapi`.
+
 ## Two root files, two jobs
 
 | File | Contains | Generates |
