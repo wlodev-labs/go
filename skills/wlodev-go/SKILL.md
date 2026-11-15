@@ -21,7 +21,7 @@ Describes `github.com/wlodev-labs/go` **≥ v0.5.0** (`SliceToGroupMap` and `Sli
 | Response includes related rows (children, a join table, many-to-one lookups) | [references/related-data.md](references/related-data.md) |
 | New external client or domain service in `services/` | [references/services.md](references/services.md) |
 | `utils/`: env, error responses, public IDs, validation | [references/utils.md](references/utils.md) |
-| Naming, Params structs, errors, logging | [references/style.md](references/style.md) |
+| Naming, Params structs, errors, logging, comments | [references/style.md](references/style.md) |
 | Any `wlodev-labs/go` helper (`postgres`, `pagination`, `ptr`, `publicid`, `zerolog`) | [references/lib.md](references/lib.md) |
 
 Complete, consistent example files for a `widgets` domain are in [examples/](examples/). Copy their shape.
@@ -65,6 +65,7 @@ The same steps apply to a new schema model on its own: write its file under `_oa
 - ✅ Use Go initialisms everywhere: `ID`, `PublicID`, `UserID`, `userID`, `ByUserIDAndPublicID`, `URL`, `API`. ❌ Never `Id`/`Url`/`Api` in Go identifiers. Generated code follows this too, via `NameNormalizer: ToCamelCaseWithInitialisms` in `generate.go`. JSON and URL names stay camelCase (`id`, `widgetId`).
 - ✅ Use the internal `int` id in the DB and expose only `public_id` (12-char nanoid from `github.com/wlodev-labs/go/publicid`) in the API.
 - ✅ Load related data in batches, not through JOINs. Run one `…ByIDs` query per relation level with `= ANY($1)`, then stitch the rows in Go inside a **loader** that Get and List both call. ❌ Never query in a loop, and never add relation fields to dbmodels. JOIN or `EXISTS` only to filter, sort or authorize the parent.
+- ✅ Default to no comments. Comment only the *why*: non-obvious decisions, workarounds and quirks, invariants, links to issues or specs. Doc comments on exported identifiers start with the name and describe the contract. ❌ Never restate what the code does, and never narrate changes (`// added to fix X`). See [references/style.md](references/style.md#comments).
 - ✅ Use `time.Now().UTC()` and `ptr.Time(...)` / `ptr.String(...)` for pointers.
 - ✅ Read env with `os.LookupEnv` and return `utils.FormatMissingEnvVarError("NAME")` when a variable is missing. Never default secrets.
 - ✅ Prefer the shared lib to a local copy: `postgres.Queries`, `BuildWhereClause`, `BuildUpdateQuery`, `UpdateField`, `GetColumns`, `pagination.Client`, `publicid`, `wlodev zerolog`.

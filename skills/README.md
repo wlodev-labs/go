@@ -39,6 +39,7 @@ Always load and follow the `wlodev-go` skill before writing or reviewing code in
 
 ## Changing the conventions
 - Keep `SKILL.md` short: it holds the rules and points to the references. Put detail in `references/<topic>.md`.
+- A rule that applies to every file (style, comments, naming) also needs a one-line version in `SKILL.md`'s core rules. References load only when the routing table sends the agent there, so a rule that lives only in a reference is easy to miss.
 - Every rule needs a ✅/❌ or a code example. Write quirks as symptom → cause → fix.
 - Examples under `examples/` must stay consistent with each other (one `widgets` domain end to end). Go files use the `.go.txt` extension so they never compile into this module.
 - When a lib API changes, update `references/lib.md` and the minimum version line in `SKILL.md` together.

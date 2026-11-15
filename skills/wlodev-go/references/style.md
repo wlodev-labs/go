@@ -50,9 +50,19 @@ func NewPublicServer(
 - Use a `switch { case errors.Is(...): }` for mapping more than one sentinel.
 
 ## Comments
-- Doc comments on exported identifiers start with the name: `// Parse takes the request parameters ...`. Wrap at about 80 columns.
-- Explain *why* (quirks, workarounds, links to upstream issues), not *what*. Mark code patched into generated templates with `CUSTOM CODE BEGIN/END`.
-- A package with non-obvious purpose gets a top comment (`// Runpod client acting as a single, unified interface ...`).
+- ✅ Default to no comments. Well-named code explains itself.
+- ❌ Never write comments that restate what the code does (`// increment counter`, `// loop over users`, `// load the widget`). ❌ No section labels inside functions (`// 1. auth guard`, `// map to response`).
+- ✅ Comment only what the code can't show: why a non-obvious decision was made, workarounds for bugs or external quirks (link the upstream issue), invariants, gotchas, and links to specs.
+  ```go
+  // Check emptiness before bumping updated_at, otherwise the payload is never
+  // empty and BuildUpdateQuery only touches the timestamp.
+  ```
+- ✅ Doc comments on exported identifiers describe the contract, not the implementation. Use the idiomatic Go form: start with the identifier's name (`// Parse takes the request parameters ...`) and wrap at about 80 columns. ❌ Don't write a doc comment that only repeats the name (`// ToWidgetGet maps a widget to WidgetGet`); leave it out.
+- ✅ A package whose purpose isn't obvious gets a package comment (`// Package widgets holds widget business rules shared by ...`).
+- ❌ Never narrate changes (`// added this to fix X`, `// updated`, `// new`). That belongs in the commit message.
+- ❌ No commented-out code. Git has the history.
+- ✅ Mark code patched into generated templates with `CUSTOM CODE BEGIN/END`.
+- The notes in this skill's `examples/` and references explain the conventions to you. Copy one into project code only if it's a *why* that a reader of that project needs.
 
 ## Misc
 - Use `time.Now().UTC()` for timestamps you write, and `ptr.Time`, `ptr.String`, `ptr.Int` and `ptr.Bool` for pointers to literals.
