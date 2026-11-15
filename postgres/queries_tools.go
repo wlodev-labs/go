@@ -101,3 +101,31 @@ func SliceToResponseMap[T any, R any, K comparable](items []*T, extractor func(*
 	}
 	return result
 }
+
+// SliceToGroupMap is the one-to-many counterpart of SliceToIndexMap. It groups
+// a slice of pointers by the key returned from keyExtractor, usually the
+// parent's foreign key (e.g. widget_id on widget_parts). The input order is
+// preserved inside each group, so ORDER BY of the child query carries over.
+// Looking up a key that had no items returns a nil slice.
+func SliceToGroupMap[T any, K comparable](items []*T, keyExtractor func(*T) K) map[K][]*T {
+	result := make(map[K][]*T)
+	for _, item := range items {
+		key := keyExtractor(item)
+		result[key] = append(result[key], item)
+	}
+	return result
+}
+
+// SliceToGroupResponseMap is the one-to-many counterpart of SliceToResponseMap.
+// It converts every item into a response model (DTO) and groups the results by
+// the returned key, usually the parent's internal ID. The parent then takes its
+// children straight from the map. The input order is preserved inside each
+// group. Looking up a key that had no items returns a nil slice.
+func SliceToGroupResponseMap[T any, R any, K comparable](items []*T, extractor func(*T) (K, R)) map[K][]R {
+	result := make(map[K][]R)
+	for _, item := range items {
+		key, value := extractor(item)
+		result[key] = append(result[key], value)
+	}
+	return result
+}

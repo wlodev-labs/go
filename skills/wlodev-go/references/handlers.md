@@ -162,5 +162,10 @@ func ToWidgetGet(dbWidget *dbmodels.Widget, params ToWidgetGetParams) WidgetGet 
 ```
 Name mappers `To<SchemaName>`. Each takes a pointer to the db model and an empty Params struct. They live in package `models`, next to the generated code.
 
+When the schema contains related data, the mapper takes the already-mapped children as positional arguments between the db model and Params, for example `ToWidgetGet(dbWidget, parts []WidgetPartGet, params)`. It turns a `nil` slice into an empty one, so the JSON is `[]` and not `null`. ❌ Mappers never query.
+
+## Related data
+When a response includes rows from other tables, every handler that returns that schema (Get, List, Create, Update) calls one shared private **loader**, such as `s.loadWidgetPartsGet(widgetIDs)`. The loader returns `map[parentID][]models.XGet`. Get passes `[]int{widget.ID}`, and List passes the page's ids. A loader error is logged and becomes a 500. ❌ Never copy the id-collecting and stitching code into a second handler. The full pattern is in [related-data.md](related-data.md).
+
 ## Generic error builders (`internal/models/generic.go`)
 `GenericBadRequestResponse`, `GenericUnauthorizedResponse`, `GenericForbiddenResponse`, `GenericNotFoundResponse` and `GenericInternalServerErrorResponse` each take `Generic<X>ResponseParams{Message *string}` and return the `components/responses` type. Use them for every generic 4xx/5xx. Don't build `UnauthorizedError{...}` by hand.

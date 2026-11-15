@@ -37,13 +37,18 @@ postgres.IsUpdatePayloadEmpty(payload) bool // true if no UpdateField is Set
 ### Helpers
 ```go
 postgres.GetColumns(cols)                    // "id, public_id, ..."
-postgres.GetColumnsWithPrefix("w", cols)     // `w.id AS "id", ...` for joins
-postgres.SliceToIdsSlice(items, func(*T) int)           // unique ids for ANY($1)
+postgres.GetColumnsWithPrefix("w", cols)     // `w.id AS "id", ...` for joins (parent filtering only)
+
+// batch loading of related rows (see related-data.md)
+postgres.SliceToIdsSlice(items, func(*T) int)           // unique ids for ANY($1); random order
 postgres.SliceToOptionalIdsSlice(items, func(*T) *int)  // skips nil FKs
-postgres.SliceToStringSlice(items, func(*T) string)
-postgres.SliceToIndexMap(items, func(*T) K) map[K]*T
-postgres.SliceToResponseMap(items, func(*T) (K, R)) map[K]R
+postgres.SliceToStringSlice(items, func(*T) string)     // unique strings for ANY($1)
+postgres.SliceToIndexMap(items, func(*T) K) map[K]*T                 // 1:1 lookup, dbmodels
+postgres.SliceToResponseMap(items, func(*T) (K, R)) map[K]R          // 1:1 lookup, API models
+postgres.SliceToGroupMap(items, func(*T) K) map[K][]*T               // 1:N grouping, dbmodels (≥ v0.5.0)
+postgres.SliceToGroupResponseMap(items, func(*T) (K, R)) map[K][]R   // 1:N grouping, API models (≥ v0.5.0)
 ```
+The group helpers keep the input order inside each group, so the child query's `ORDER BY` carries over. A lookup of a key with no items returns `nil`, and the parent mapper turns it into `[]`. Use `SliceToGroupResponseMap` for leaf children. When building a child needs a lookup that can fail (a join-table row and its target), write the loop by hand with an error path. [related-data.md](related-data.md) shows which helper fits which step.
 Errors: `ErrNoRowsAffected`, `ErrNoFieldsToUpdate`, `ErrInvalidUpdatePayload`.
 
 ## `pagination`

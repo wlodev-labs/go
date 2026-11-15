@@ -43,7 +43,7 @@ CREATE INDEX idx_widgets_user_id_created_at ON widgets (user_id, created_at DESC
 -- +goose Down
 DROP TABLE IF EXISTS widgets;
 ```
-Table conventions: plural snake_case names, `id SERIAL` internal key, `public_id VARCHAR(12) UNIQUE` (or 32/64, matching `publicid.Size*`), owner FK with `ON DELETE CASCADE`, `updated_at` and `created_at` `NOT NULL DEFAULT NOW()`. `VARCHAR(n)` lengths match the validator limits. Index the pagination column together with the owner column.
+Table conventions: plural snake_case names, `id SERIAL` internal key, `public_id VARCHAR(12) UNIQUE` (or 32/64, matching `publicid.Size*`), owner FK with `ON DELETE CASCADE`, `updated_at` and `created_at` `NOT NULL DEFAULT NOW()`. `VARCHAR(n)` lengths match the validator limits. Index the pagination column together with the owner column. Index every FK column that a `…ByIDs` query filters with `ANY`; a composite index or `UNIQUE` whose first column is that FK counts.
 
 ## Client (`postgres.go`, package `postgresdb`)
 ```go
@@ -229,5 +229,5 @@ func (q *Queries) WidgetsDeleteWidget(widgetID int) error {
 - `BuildUpdateQuery` returns `postgres.ErrNoFieldsToUpdate` for an empty payload. Guard against this with `IsUpdatePayloadEmpty` in the handler.
 - Use `postgres.IsUniqueConstraintError(err)` to turn duplicate-key violations into a 400/409 domain code.
 
-### Avoiding N+1 for child rows
-Load the parents, collect their ids with `postgres.SliceToIdsSlice(parents, func(p *dbmodels.Widget) int { return p.ID })`, and run one query with `WHERE widget_id = ANY($1)`. Index the result with `postgres.SliceToIndexMap` and attach the children. Use `postgres.GetColumnsWithPrefix("w", cols)` in joins.
+### Related rows: batch loading, not JOINs
+Child, join-table and lookup data is loaded with one `<Domain>Select<What>By<Key>IDs(ids []int)` query per level (`WHERE fk = ANY($1)`, deterministic `ORDER BY`), then stitched together in Go. Each query scans into one flat dbmodel. JOINs (with `postgres.GetColumnsWithPrefix("w", cols)`) or `EXISTS` appear only in a parent query that filters, sorts or authorizes by a child column. See [related-data.md](related-data.md) for the full pattern.

@@ -7,7 +7,7 @@ description: House conventions for every wlodev Go service (std-http + oapi-code
 
 Every wlodev Go service has the same shape. Follow these rules so all projects look as if one person wrote them. If the code in the current project contradicts a rule, match the project and point out the difference to the user. Do not "fix" it silently.
 
-Describes `github.com/wlodev-labs/go` **≥ v0.3.1** (`publicid` requires the first release after v0.3.1) and `oapi-codegen/v2` **v2.8.x** (std-http + strict).
+Describes `github.com/wlodev-labs/go` **≥ v0.5.0** (`SliceToGroupMap` and `SliceToGroupResponseMap` require the first release after v0.4.1) and `oapi-codegen/v2` **v2.8.x** (std-http + strict).
 
 ## Routing: read the reference before you touch the area
 
@@ -18,6 +18,7 @@ Describes `github.com/wlodev-labs/go` **≥ v0.3.1** (`publicid` requires the fi
 | Run or change codegen, `generate.go`, import mapping, templates | [references/oapi-codegen.md](references/oapi-codegen.md) |
 | Implement a handler in `internal/public` | [references/handlers.md](references/handlers.md) |
 | Migrations, dbmodels, queries, transactions | [references/database.md](references/database.md) |
+| Response includes related rows (children, a join table, many-to-one lookups) | [references/related-data.md](references/related-data.md) |
 | New external client or domain service in `services/` | [references/services.md](references/services.md) |
 | `utils/`: env, error responses, public IDs, validation | [references/utils.md](references/utils.md) |
 | Naming, Params structs, errors, logging | [references/style.md](references/style.md) |
@@ -63,6 +64,7 @@ The same steps apply to a new schema model on its own: write its file under `_oa
 - ✅ Functions that may grow take a trailing `XParams` struct, **even an empty one** (`ToWidgetGetParams{}`, `NotesSelectUserPaginatedNotesParams{}`).
 - ✅ Use Go initialisms everywhere: `ID`, `PublicID`, `UserID`, `userID`, `ByUserIDAndPublicID`, `URL`, `API`. ❌ Never `Id`/`Url`/`Api` in Go identifiers. Generated code follows this too, via `NameNormalizer: ToCamelCaseWithInitialisms` in `generate.go`. JSON and URL names stay camelCase (`id`, `widgetId`).
 - ✅ Use the internal `int` id in the DB and expose only `public_id` (12-char nanoid from `github.com/wlodev-labs/go/publicid`) in the API.
+- ✅ Load related data in batches, not through JOINs. Run one `…ByIDs` query per relation level with `= ANY($1)`, then stitch the rows in Go inside a **loader** that Get and List both call. ❌ Never query in a loop, and never add relation fields to dbmodels. JOIN or `EXISTS` only to filter, sort or authorize the parent.
 - ✅ Use `time.Now().UTC()` and `ptr.Time(...)` / `ptr.String(...)` for pointers.
 - ✅ Read env with `os.LookupEnv` and return `utils.FormatMissingEnvVarError("NAME")` when a variable is missing. Never default secrets.
 - ✅ Prefer the shared lib to a local copy: `postgres.Queries`, `BuildWhereClause`, `BuildUpdateQuery`, `UpdateField`, `GetColumns`, `pagination.Client`, `publicid`, `wlodev zerolog`.

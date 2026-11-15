@@ -5,6 +5,7 @@ This directory ships **one** skill, `wlodev-go`. It covers everything a wlodev G
 - the `_oas/` OpenAPI structure and the `models.openapi.yml` registry
 - the oapi-codegen (std-http + strict) setup and its quirks
 - handlers, the database layer (goose, sqlx, dbmodels, queries), services and utils
+- loading related data without JOINs (batch `…ByIDs` queries + shared loaders)
 - Go writing style
 - how to use this library (`postgres`, `pagination`, `ptr`, `publicid`, `zerolog`)
 
