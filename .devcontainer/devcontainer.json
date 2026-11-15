@@ -2,8 +2,8 @@
     "name": "${localWorkspaceFolderBasename}",
     "image": "mcr.microsoft.com/devcontainers/go:1.27-trixie",
     "features": {
-        "ghcr.io/wlodev-labs/devcontainer-features/go-stack:1": {},
-        "ghcr.io/wlodev-labs/devcontainer-features/claude-sandbox:1": {}
+        "ghcr.io/wlodev-labs/devcontainer-features/go-stack:1.0.4": {},
+        "ghcr.io/wlodev-labs/devcontainer-features/claude-sandbox:1.2.3": {}
     },
     "postCreateCommand": "if [ -f go.mod ]; then go mod download; fi",
     "remoteUser": "vscode"
