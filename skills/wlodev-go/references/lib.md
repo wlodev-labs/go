@@ -87,10 +87,12 @@ import (
     wlodevzerolog "github.com/wlodev-labs/go/zerolog"
 )
 
-zerolog.ErrorStackMarshaler = wlodevzerolog.ErrorStackMarshaler // cockroachdb stacks, runtime frames trimmed
+zerolog.ErrorStackMarshaler = wlodevzerolog.ErrorStackMarshaler // cockroachdb stacks, hand-written frames only
 logger := wlodevzerolog.New(isDev) // console writer in dev, JSON in prod; Timestamp+Stack+Caller; RFC3339
 ```
 Set `ErrorStackMarshaler` **before** the first log call. Without it, `.Err(err)` has no stack.
+
+The stack lists only frames from the service's own hand-written code, innermost first. It leaves out runtime and stdlib frames, dependency modules (any path with an `@v` module version, which includes this lib) and generated files (`*.gen.go`, `*_gen.go`, `*.pb.go`). A handler error shows the frames from the service code down to the handler, plus your middleware, and none of the `public.gen.go` plumbing.
 
 ## Releasing the lib
 `make publish VERSION=vX.Y.Z` tags the release, pushes it and warms proxy.golang.org. Projects then run `go get github.com/wlodev-labs/go@vX.Y.Z`. The skill tracks `main`, so if a project pins an older version and an API in this file is missing, upgrade the lib. Don't reimplement the API.
